@@ -1,2 +1,2 @@
 # BookieGG-Bots
-Bookie GG Bots Readme
+Current implementation of Bookie Bots.
