@@ -3,6 +3,8 @@ var Steam = require('steam');
 var SteamTrade = require('steam-trade');
 var SteamTradeOffers = require('steam-tradeoffers');
 var async = require('async');
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
 
 var steamIDtoTrade = '76561198009923867'
 var inTrade = false;
@@ -11,9 +13,8 @@ var inventory;
 var botDict = {};
 
 var steamTrade = new SteamTrade();
-var steamOffers = new SteamTradeOffers();
+//var steamOffers = new SteamTradeOffers();
 
-var objectArray = [];
 var itemID = ['1723463492', '1704536788'];
 
 // if we've saved a server list, use it
@@ -23,19 +24,24 @@ if (fs.existsSync('servers')) {
 
 
 var buildABot = function(steamName, password){
+
   var bot = new Steam.SteamClient();
-  if(fs.existsSync("sentryfile" + 'sirrofl360')){
+  this.botInstance = bot;
+  var steamOffers = new SteamTradeOffers();
+  this.inTrade = false;
+  this.offerInstance = steamOffers;
+  if(fs.existsSync("sentryfile" + steamName)){
     //If there is a sentry file, use it.
     bot.logOn({
-      accountName: 'sirrofl360',
-      password: 'lightningrox',
+      accountName: steamName,
+      password: password,
       shaSentryfile: fs.readFileSync("sentryfile" + 'sirrofl360')
     })
   } else {
     //Probably gonna need another couple ifs here, gonna need to scrape steamguard.
     bot.logOn({
-      accountName: 'sirrofl360',
-      password: 'lightningrox'
+      accountName: steamName,
+      password: password
     })
   }
 
@@ -47,12 +53,14 @@ var buildABot = function(steamName, password){
   bot.on('webSessionID', function(sessionID){
     //steamTrade.sessionID = sessionID;
     bot.webLogOn(function(cookies){
+        for(var cookie in cookies) console.log(cookies[cookie]);
         steamOffers.setup({
           sessionID: sessionID,
           webCookie: cookies
         }, function(){
+          console.log(steamOffers);
           console.log("SteamOffers cookies set");
-          return steamOffers;
+          eventEmitter.emit('logonFinished');
         })
         /*console.log(cookies);
         steamOffers.loadPartnerInventory({
@@ -152,7 +160,6 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
           appId: 730,
           contextId: 2
         }, function(errr, items){
-
           for(var index in itemIDs){
             objectArray.push({
               "appid": 730,
@@ -163,7 +170,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
           }
           console.log(objectArray);
 
-          steamOffers.makeOffer({
+          steamOfferObj.makeOffer({
             partnerSteamId : steamID,
             itemsFromMe: '{}',
             itemsFromThem: objectArray
@@ -174,19 +181,13 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
           
         })
 }
-/*async.waterfall([function(callback){
-  var offerObj = new buildABot('sirrofl360', 'lightningrox');
-  callback(null);
-  }, 
-  function(callback, offerObj){
-    //requestItems(offerObj, '76561198009923867', itemID);
-    callback(null);
-  }
-  ], function (err, result){
-  console.log("FINAL");
 
-})*/
-var offerObj = new buildABot('sirrofl360', 'lightningrox');
+
+var botObj = new buildABot('sirrofl360', 'lightningrox');
+eventEmitter.on('logonFinished', function(){
+  requestItems(botObj.offerInstance, steamIDtoTrade, itemID)
+});
+
 //requestItems(offerObj, '76561198009923867', itemID);
 //console.log("Testing");
 //requestItems(offerObj, '76561198009923867', itemID);
