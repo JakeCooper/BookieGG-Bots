@@ -222,6 +222,7 @@ var returnItems = function(steamOfferObj, steamID, itemIDs){
                   }
               });
             }
+            getData();
           })
         })
    
