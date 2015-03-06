@@ -1,8 +1,11 @@
 var fs = require('fs');
+
 var Steam = require('steam');
-var SteamTrade = require('steam-trade');
 var SteamTradeOffers = require('steam-tradeoffers');
-var async = require('async');
+
+var express = require('express')
+var app = express()
+
 var events = require('events');
 var eventEmitter = new events.EventEmitter();
 
@@ -10,13 +13,50 @@ var steamIDtoTrade = '76561198009923867'
 var inTrade = false;
 var inventory;
 
-var botDict = {};
-
-var steamTrade = new SteamTrade();
-//var steamOffers = new SteamTradeOffers();
+var botArray = [];
 
 var itemID = ['1767404607', '1775623782'];
 var itemFromThem = ['1776151529', '1776151533']
+
+var server = app.listen(3000, function () {
+
+  var host = server.address().address
+  var port = server.address().port
+
+  console.log('BookieBot Webserver launched at http://%s:%s', host, port)
+
+})
+
+app.get('/', function (req, res) {
+  res.send('Hi I am a steambot server written in express!')
+})
+
+app.get('/buildBots', function(req, res){
+  var botObj = new buildABot('sirrofl360', 'lightningrox');
+  botArray.push(botObj);
+  eventEmitter.on('logonFinished', function(){
+    console.log("Bots have been signed in");
+    res.send("Bots signed in")
+  });
+});
+
+app.get('/requestItems', function(req, res){
+    requestItems(botArray[0].offerInstance, steamIDtoTrade, itemID)
+    eventEmitter.on('requestOfferTimeout', function(){
+      console.log("Request offer has timed out")
+      res.send("Request offer has timed out")
+    })
+});
+
+app.get('/returnItems', function(req, res){
+    returnItems(botArray[0].offerInstance, steamIDtoTrade, itemFromThem);
+    //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
+    eventEmitter.on('returnOfferTimeout', function(){
+      console.log("return Offer has timed out")
+      res.send("Return offer has timed out")
+    })
+});
+
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
@@ -52,7 +92,6 @@ var buildABot = function(steamName, password){
   });
 
   bot.on('webSessionID', function(sessionID){
-    //steamTrade.sessionID = sessionID;
     bot.webLogOn(function(cookies){
         for(var cookie in cookies) console.log(cookies[cookie]);
         steamOffers.setup({
@@ -63,46 +102,6 @@ var buildABot = function(steamName, password){
           console.log("SteamOffers cookies set");
           eventEmitter.emit('logonFinished');
         })
-        /*console.log(cookies);
-        steamOffers.loadPartnerInventory({
-          partnerSteamId: '76561198009923867',
-          appId: 730,
-          contextId: 2
-        }, function(errr, items){
-          
-          for(var index in itemID){
-            objectArray.push({
-              "appid": 730,
-              "contextid" : 2,
-              "amount" : 1,
-              "assetid" : itemID[index]
-            });
-          }
-          console.log(objectArray);
-
-
-          steamOffers.makeOffer({
-            partnerSteamId : '76561198009923867',
-            itemsFromMe: '{}',
-            itemsFromThem: objectArray
-          }, function(err, tradeOfferID) {
-            console.log(err);
-            console.log(tradeOfferID);
-          })
-          return steamOffers;
-          
-        })*/
-        /*steamTrade.loadInventory(730,2, function(data){
-            require('fs').writeFile('JSONOUTPUT.json',JSON.stringify(data),function(err) {
-                if(err){
-                    console.log(err);
-                } else {
-                    console.log('Saved to JSONOUTPUT.json');
-                }
-            });
-          var this.inventory = data;
-        });*/
-        //bot.trade(steamIDtoTrade);
     });
     bot.on('sentry',function(sentryHash) {
       fs.exists('sentryfile' + steamName, function(exists){
@@ -123,36 +122,6 @@ var buildABot = function(steamName, password){
   
   });
 }
-
-/*var requestItems = function(steamOfferObj, steamID, itemIDs){
-  var objectArray = [];
-  steamOfferObj.loadPartnerInventory({
-          partnerSteamId: steamID,
-          appId: 730,
-          contextId: 2
-        }, function(errr, items){
-
-          for(var index in itemIDs){
-            objectArray.push({
-              "appid": 730,
-              "contextid" : 2,
-              "amount" : 1,
-              "assetid" : itemID[index]
-            });
-          }
-          console.log(objectArray);
-
-          steamOffers.makeOffer({
-            partnerSteamId : steamID,
-            itemsFromMe: '{}',
-            itemsFromThem: objectArray
-          }, function(err, tradeOfferID) {
-            console.log(err);
-            console.log(tradeOfferID);
-          })
-          
-        })
-}*/
 
 var requestItems = function(steamOfferObj, steamID, itemIDs){
   var objectArray = [];
@@ -184,7 +153,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
 
             function getData() {
               if (Date.now() - start > 300000){
-                eventEmitter.emit('offerTimeout');
+                eventEmitter.emit('requestOfferTimeout');
                 return;
               }
               steamOfferObj.getOffer({
@@ -232,69 +201,39 @@ var returnItems = function(steamOfferObj, steamID, itemIDs){
           }, function(err, tradeOfferID){
             console.log(err);
             console.log(tradeOfferID);
+            var start = Date.now();
+
+            function getData() {
+              if (Date.now() - start > 300000){
+                eventEmitter.emit('requestOfferTimeout');
+                return;
+              }
+              steamOfferObj.getOffer({
+                  "tradeOfferId": tradeOfferID["tradeofferid"] // The tradeoffer id
+              }, function(error, body) {
+                  setTimeout(getData, 10000);
+                  if (error == null) {
+                    console.log(body);
+                      if (body.response.offer.trade_offer_state == 3) {
+                          return "Offer Accepted" //on accept
+                      } else {
+                          //on not accepted
+                      }
+                  }
+              });
+            }
           })
         })
    
 }
 
 
-var botObj = new buildABot('sirrofl360', 'lightningrox');
+/*var botObj = new buildABot('sirrofl360', 'lightningrox');
 eventEmitter.on('logonFinished', function(){
   //returnItems(botObj.offerInstance, steamIDtoTrade, itemFromThem);
   requestItems(botObj.offerInstance, steamIDtoTrade, itemID)
 });
+
 eventEmitter.on('offerTimeout', function(){
-  console.log("NO");
-})
-
-//requestItems(offerObj, '76561198009923867', itemID);
-//console.log("Testing");
-//requestItems(offerObj, '76561198009923867', itemID);
-
-/*bot.on('sentry',function(sentryHash) {
-    require('fs').writeFile('sentryfile',sentryHash,function(err) {
-      if(err){
-        console.log(err);
-      } else {
-        console.log('Saved sentry file hash as "sentryfile"');
-      }
-    });
-});*/
-
-
-/*bot.on('sessionStart', function(steamID){
-	inTrade = true;
-	steamTrade.open(steamID, function(){
-		console.log("trade successfully started");
-		steamTrade.addItem(inventory[0], function(){
-			console.log(inventory[1]["id"]);
-		});
-	});
-});
-
-steamTrade.on('ready', function(){
-	console.log(steamTrade.tradePartnerSteamID + ' readying');
-	steamTrade.ready(function(){
-    console.log(steamTrade.themAssets);
-		console.log("Bot Ready");
-		steamTrade.confirm();
-		console.log("Bot Confirming");
-	});
-
-});
-
-steamTrade.on('end', function(status, temp){
-  inTrade = false;
-	if (status =='complete'){
-      //If completed, sends getItems function.
-      getItems = temp;
-  		getItems(function(items){
-  		console.log(items);
-		});
-	} else {
-      //If pending, tradei
-      tradeID = temp;
-      console.log(tradeID);
-    }
-});*/
-
+  console.log("Offer has timed out")
+})*/
