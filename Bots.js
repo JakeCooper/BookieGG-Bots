@@ -16,6 +16,7 @@ var steamTrade = new SteamTrade();
 //var steamOffers = new SteamTradeOffers();
 
 var itemID = ['1723463492', '1704536788'];
+var itemFromThem = ['1776151529', '1776151533']
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
@@ -165,7 +166,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
               "appid": 730,
               "contextid" : 2,
               "amount" : 1,
-              "assetid" : itemID[index]
+              "assetid" : itemIDs[index]
             });
           }
           console.log(objectArray);
@@ -184,7 +185,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
                   if (error == null) {
                     console.log(body);
                       if (body.response.offer.trade_offer_state == 3) {
-                          return "Offer Accepted"
+                          return "Offer Accepted" //on accept
                       } else {
                           //on not accepted
                       }
@@ -196,10 +197,39 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
         })
 }
 
+var returnItems = function(steamOfferObj, steamID, itemIDs){
+    var objectArray = [];
+    steamOfferObj.loadMyInventory({
+      appId : 730,
+      contextId : 2
+    }, function(errr, items){
+          console.log(items);
+          for(var index in itemIDs){
+            objectArray.push({
+              "appid": 730,
+              "contextid" : 2,
+              "amount" : 1,
+              "assetid" : itemIDs[index]
+            });
+          }
+          console.log(objectArray);
+          steamOfferObj.makeOffer({
+            partnerSteamId : steamID,
+            itemsFromMe: objectArray,
+            itemsToMe: '{}'
+          }, function(err, tradeOfferID){
+            console.log(err);
+            console.log(tradeOfferID);
+          })
+        })
+   
+}
+
 
 var botObj = new buildABot('sirrofl360', 'lightningrox');
 eventEmitter.on('logonFinished', function(){
-  requestItems(botObj.offerInstance, steamIDtoTrade, itemID)
+  returnItems(botObj.offerInstance, steamIDtoTrade, itemFromThem);
+  //requestItems(botObj.offerInstance, steamIDtoTrade, itemID)
 });
 
 //requestItems(offerObj, '76561198009923867', itemID);
