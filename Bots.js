@@ -177,22 +177,23 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
           }, function(err, tradeOfferID) {
             console.log(err);
             console.log(tradeOfferID);
-          })
-          setInterval(function(){
+            setInterval(function(){
               steamOfferObj.getOffer({
-                  "tradeofferid": tradeOfferID // The tradeoffer id
+                  "tradeOfferId": tradeOfferID["tradeofferid"] // The tradeoffer id
               }, function(error, body) {
                   if (error == null) {
+                    console.log(body);
                       if (body.response.offer.trade_offer_state == 3) {
-                          return "Success";
+                          return "Offer Accepted"
                       } else {
                           //on not accepted
                       }
                   }
               });
           }, 5000);
-                    
           })
+          
+        })
 }
 
 
