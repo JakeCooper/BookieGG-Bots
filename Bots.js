@@ -15,7 +15,7 @@ var botDict = {};
 var steamTrade = new SteamTrade();
 //var steamOffers = new SteamTradeOffers();
 
-var itemID = ['1723463492', '1704536788'];
+var itemID = ['1767404607', '1775623782'];
 var itemFromThem = ['1776151529', '1776151533']
 
 // if we've saved a server list, use it
@@ -162,6 +162,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
           contextId: 2
         }, function(errr, items){
           for(var index in itemIDs){
+            console.log(items);
             objectArray.push({
               "appid": 730,
               "contextid" : 2,
@@ -178,10 +179,18 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
           }, function(err, tradeOfferID) {
             console.log(err);
             console.log(tradeOfferID);
-            setInterval(function(){
+
+            var start = Date.now();
+
+            function getData() {
+              if (Date.now() - start > 300000){
+                eventEmitter.emit('offerTimeout');
+                return;
+              }
               steamOfferObj.getOffer({
                   "tradeOfferId": tradeOfferID["tradeofferid"] // The tradeoffer id
               }, function(error, body) {
+                  setTimeout(getData, 10000);
                   if (error == null) {
                     console.log(body);
                       if (body.response.offer.trade_offer_state == 3) {
@@ -191,7 +200,10 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
                       }
                   }
               });
-          }, 5000);
+            }
+
+            getData();
+
           })
           
         })
@@ -228,9 +240,12 @@ var returnItems = function(steamOfferObj, steamID, itemIDs){
 
 var botObj = new buildABot('sirrofl360', 'lightningrox');
 eventEmitter.on('logonFinished', function(){
-  returnItems(botObj.offerInstance, steamIDtoTrade, itemFromThem);
-  //requestItems(botObj.offerInstance, steamIDtoTrade, itemID)
+  //returnItems(botObj.offerInstance, steamIDtoTrade, itemFromThem);
+  requestItems(botObj.offerInstance, steamIDtoTrade, itemID)
 });
+eventEmitter.on('offerTimeout', function(){
+  console.log("NO");
+})
 
 //requestItems(offerObj, '76561198009923867', itemID);
 //console.log("Testing");
