@@ -12,8 +12,9 @@ var eventEmitter = new events.EventEmitter();
 var steamIDtoTrade = '76561198009923867'
 var inTrade = false;
 var inventory;
+var loginTracker = 0;
 
-var botArray = [];
+var botQueue = [];
 
 var itemID = ['1767404607', '1775623782'];
 var itemFromThem = ['1776151529', '1776151533']
@@ -32,15 +33,31 @@ app.get('/', function (req, res) {
 })
 
 app.get('/buildBots', function(req, res){
-  var botObj = new buildABot('sirrofl360', 'lightningrox');
+  logins = fs.readFileSync('bots', 'utf8').split("\n");
+  for(var login in logins){
+    var userPass = logins[login].split("\t");
+    console.log("Logging in " + userPass[0]);
+    botQueue.push(buildABot(userPass[0], userPass[1]))
+  }
+  eventEmitter.on('logonFinished', function(){
+    if(loginTracker >= logins.length - 1){
+      console.log("ALL BOTS LOGGED IN");
+      res.send("ALL BOTS LOGGED IN");
+    } else {
+      console.log("Bots still need to be logged in");
+      loginTracker++;
+    }
+  });
+  /*var botObj = new buildABot('sirrofl360', 'lightningrox');
   botArray.push(botObj);
   eventEmitter.on('logonFinished', function(){
     console.log("Bots have been signed in");
     res.send("Bots signed in")
-  });
+  });*/
 });
 
 app.get('/requestItems', function(req, res){
+    //Check if Bots are online
     requestItems(botArray[0].offerInstance, steamIDtoTrade, itemID)
     eventEmitter.on('requestOfferTimeout', function(){
       console.log("Request offer has timed out")
@@ -49,6 +66,7 @@ app.get('/requestItems', function(req, res){
 });
 
 app.get('/returnItems', function(req, res){
+    //Check if Bots are online
     returnItems(botArray[0].offerInstance, steamIDtoTrade, itemFromThem);
     //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
     eventEmitter.on('returnOfferTimeout', function(){
@@ -71,12 +89,12 @@ var buildABot = function(steamName, password){
   var steamOffers = new SteamTradeOffers();
   this.inTrade = false;
   this.offerInstance = steamOffers;
-  if(fs.existsSync("sentryfile" + steamName)){
+  if(fs.existsSync(steamName + ".sentry")){
     //If there is a sentry file, use it.
     bot.logOn({
       accountName: steamName,
       password: password,
-      shaSentryfile: fs.readFileSync("sentryfile" + 'sirrofl360')
+      shaSentryfile: fs.readFileSync(steamName + ".sentry")
     })
   } else {
     //Probably gonna need another couple ifs here, gonna need to scrape steamguard.
@@ -87,7 +105,7 @@ var buildABot = function(steamName, password){
   }
 
   bot.on('loggedOn', function() {
-    console.log('Logged in!');
+    console.log(steamName + ' Logged in!');
     bot.setPersonaState(Steam.EPersonaState.Online); // to display your bot's status as "Online"
   });
 
@@ -98,7 +116,6 @@ var buildABot = function(steamName, password){
           sessionID: sessionID,
           webCookie: cookies
         }, function(){
-          console.log(steamOffers);
           console.log("SteamOffers cookies set");
           eventEmitter.emit('logonFinished');
         })
@@ -110,7 +127,7 @@ var buildABot = function(steamName, password){
           if(err){
             console.log(err);
           } else {
-            console.log('Saved sentry file hash as "sentryfile"');
+            console.log('Saved sentry file hash as ' + steamName + '.sentry');
           }
           });
         } else {
