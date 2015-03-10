@@ -13,6 +13,7 @@ var steamIDtoTrade = '76561198009923867'
 var inTrade = false;
 var inventory;
 var loginTracker = 0;
+var userAccessToken = 'u4BAUYGe';
 
 var botQueue = [];
 
@@ -37,7 +38,8 @@ app.get('/buildBots', function(req, res){
   for(var login in logins){
     var userPass = logins[login].split("\t");
     console.log("Logging in " + userPass[0]);
-    botQueue.push(buildABot(userPass[0], userPass[1]))
+    var botObj = new buildABot(userPass[0], userPass[1])
+    botQueue.push(botObj);
   }
   eventEmitter.on('logonFinished', function(){
     if(loginTracker >= logins.length - 1){
@@ -48,31 +50,55 @@ app.get('/buildBots', function(req, res){
       loginTracker++;
     }
   });
-  /*var botObj = new buildABot('sirrofl360', 'lightningrox');
-  botArray.push(botObj);
-  eventEmitter.on('logonFinished', function(){
-    console.log("Bots have been signed in");
-    res.send("Bots signed in")
-  });*/
 });
 
 app.get('/requestItems', function(req, res){
     //Check if Bots are online
-    requestItems(botArray[0].offerInstance, steamIDtoTrade, itemID)
-    eventEmitter.on('requestOfferTimeout', function(){
-      console.log("Request offer has timed out")
-      res.send("Request offer has timed out")
-    })
+    if(botQueue.length == 0){
+      //If there are no bots in the queue to take the order, then we can't process it.
+      console.log("Sorry no bots available");
+      res.send("No Bots available ATM");
+      return;
+    } else {
+      var currentBot = botQueue.shift();
+    }
+    requestItems(currentBot.offerInstance, steamIDtoTrade, itemID, userAccessToken);
+
+    eventEmitter.on('requestOfferExpired', function(){
+      console.log("Request offer has timed out/been cancelled");
+      res.send("Request offer has timed out/been cancelled");
+      botQueue.push(currentBot);
+    });
+    eventEmitter.on('requestOfferAccepted', function(){
+      console.log("Request offer has completed");
+      res.send("Request offer has completed");
+      botQueue.push(currentBot);
+    });
+
 });
 
 app.get('/returnItems', function(req, res){
     //Check if Bots are online
-    returnItems(botArray[0].offerInstance, steamIDtoTrade, itemFromThem);
+    if(botQueue.length == 0){
+      //If there are no bots in the queue to take the order, then we can't process it.
+      console.log("Sorry no bots available");
+      res.send("No Bots available ATM");
+      return;
+    } else {
+      var currentBot = botQueue.shift();
+    }
+    returnItems(currentBot.offerInstance, steamIDtoTrade, itemFromThem);
     //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
-    eventEmitter.on('returnOfferTimeout', function(){
+    eventEmitter.on('returnOfferExpired', function(){
       console.log("return Offer has timed out")
       res.send("Return offer has timed out")
+      botQueue.push(currentBot);
     })
+    eventEmitter.on('returnOfferAccepted', function(){
+      console.log("Return offer has completed");
+      res.send("Return offer has completed");
+      botQueue.push(currentBot);
+    });
 });
 
 
@@ -83,9 +109,9 @@ if (fs.existsSync('servers')) {
 
 
 var buildABot = function(steamName, password){
-
   var bot = new Steam.SteamClient();
   this.botInstance = bot;
+  this.name = steamName;
   var steamOffers = new SteamTradeOffers();
   this.inTrade = false;
   this.offerInstance = steamOffers;
@@ -140,7 +166,7 @@ var buildABot = function(steamName, password){
   });
 }
 
-var requestItems = function(steamOfferObj, steamID, itemIDs){
+var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken){
   var objectArray = [];
   steamOfferObj.loadPartnerInventory({
           partnerSteamId: steamID,
@@ -160,29 +186,43 @@ var requestItems = function(steamOfferObj, steamID, itemIDs){
 
           steamOfferObj.makeOffer({
             partnerSteamId : steamID,
-            itemsFromMe: '{}',
+            accessToken : userAccessToken,
+            itemsFromMe: {},
             itemsFromThem: objectArray
-          }, function(err, tradeOfferID) {
+          }, function(err, data) {
             console.log(err);
-            console.log(tradeOfferID);
-
+            console.log(data);
             var start = Date.now();
-
             function getData() {
+              var setTimer = setTimeout(getData, 10000);
               if (Date.now() - start > 300000){
-                eventEmitter.emit('requestOfferTimeout');
-                return;
+                steamOfferObj.cancelOffer({
+                  tradeOfferId: data["tradeofferid"]
+                }, function(){
+                  clearTimeout(setTimer);
+                  eventEmitter.emit('requestOfferExpired');
+                  return;
+                })
+                
               }
               steamOfferObj.getOffer({
-                  "tradeOfferId": tradeOfferID["tradeofferid"] // The tradeoffer id
+                  tradeOfferId : data["tradeofferid"] // The tradeoffer id
               }, function(error, body) {
-                  setTimeout(getData, 10000);
+                  console.log(body);
+                  console.log(error);
                   if (error == null) {
-                    console.log(body);
+                    //console.log(body);
+                    console.log(body.response.offer.trade_offer_state);
                       if (body.response.offer.trade_offer_state == 3) {
+                          eventEmitter.emit('requestOfferAccepted');
+                          clearTimeout(setTimer);
                           return "Offer Accepted" //on accept
+                      } else if(body.response.offer.trade_offer_state == 7){
+                          eventEmitter.emit('requestOfferExpired');
+                          clearTimeout(setTimer);
+                          return "Offer cancelled";
                       } else {
-                          //on not accepted
+
                       }
                   }
               });
@@ -201,57 +241,58 @@ var returnItems = function(steamOfferObj, steamID, itemIDs){
       appId : 730,
       contextId : 2
     }, function(errr, items){
-          console.log(items);
-          for(var index in itemIDs){
-            objectArray.push({
-              "appid": 730,
-              "contextid" : 2,
-              "amount" : 1,
-              "assetid" : itemIDs[index]
+        console.log(items);
+        for(var index in itemIDs){
+          objectArray.push({
+            "appid": 730,
+            "contextid" : 2,
+            "amount" : 1,
+            "assetid" : itemIDs[index]
+          });
+        }
+        console.log(objectArray);
+        steamOfferObj.makeOffer({
+          partnerSteamId : steamID,
+          itemsFromMe: objectArray,
+          itemsToMe: {}
+        }, function(err, data){
+          console.log(err);
+          console.log(data);
+          var start = Date.now();
+
+          function getData() {
+            setTimeout(getData, 10000);
+            if (Date.now() - start > 300000){
+              steamOfferObj.cancelOffer({
+                tradeOfferId: data["tradeofferid"]
+              }, function(){
+                clearTimeout(setTimer);
+                eventEmitter.emit('returnOfferExpired');
+                return;
+              })
+              
+            }
+            steamOfferObj.getOffer({
+                tradeOfferId : data["tradeofferid"] // The tradeoffer id
+            }, function(error, body) {
+                if (error == null) {
+                  console.log(body);
+                    if (body.response.offer.trade_offer_state == 3) {
+                        eventEmitter.emit('returnOfferAccepted');
+                        clearTimeout(setTimer);
+                        return "Offer Accepted" //on accept
+                    } else if(body.response.offer.trade_offer_state == 7){
+                        eventEmitter.emit('returnOfferExpired');
+                        clearTimeout(setTimer);
+                        return "Offer cancelled";
+                    } else {
+
+                    }
+                }
             });
           }
-          console.log(objectArray);
-          steamOfferObj.makeOffer({
-            partnerSteamId : steamID,
-            itemsFromMe: objectArray,
-            itemsToMe: '{}'
-          }, function(err, tradeOfferID){
-            console.log(err);
-            console.log(tradeOfferID);
-            var start = Date.now();
-
-            function getData() {
-              if (Date.now() - start > 300000){
-                eventEmitter.emit('requestOfferTimeout');
-                return;
-              }
-              steamOfferObj.getOffer({
-                  "tradeOfferId": tradeOfferID["tradeofferid"] // The tradeoffer id
-              }, function(error, body) {
-                  setTimeout(getData, 10000);
-                  if (error == null) {
-                    console.log(body);
-                      if (body.response.offer.trade_offer_state == 3) {
-                          return "Offer Accepted" //on accept
-                      } else {
-                          //on not accepted
-                      }
-                  }
-              });
-            }
-            getData();
-          })
+          getData();
         })
+    })
    
 }
-
-
-/*var botObj = new buildABot('sirrofl360', 'lightningrox');
-eventEmitter.on('logonFinished', function(){
-  //returnItems(botObj.offerInstance, steamIDtoTrade, itemFromThem);
-  requestItems(botObj.offerInstance, steamIDtoTrade, itemID)
-});
-
-eventEmitter.on('offerTimeout', function(){
-  console.log("Offer has timed out")
-})*/
