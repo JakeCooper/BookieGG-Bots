@@ -1,9 +1,12 @@
 var fs = require('fs');
 
+var request = require('request');
+
 var Steam = require('steam');
 var SteamTradeOffers = require('steam-tradeoffers');
 
 var express = require('express')
+var http = require('http')
 var app = express()
 
 var events = require('events');
@@ -17,7 +20,7 @@ var userAccessToken = 'u4BAUYGe';
 
 var botQueue = [];
 
-var itemID = ['1767404607', '1775623782'];
+var itemID = ['1775623782'];
 var itemFromThem = ['1776151529', '1776151533']
 
 var server = app.listen(3000, function () {
@@ -27,13 +30,8 @@ var server = app.listen(3000, function () {
 
   console.log('BookieBot Webserver launched at http://%s:%s', host, port)
 
-})
 
-app.get('/', function (req, res) {
-  res.send('Hi I am a steambot server written in express!')
-})
-
-app.get('/buildBots', function(req, res){
+  //Bots sign in on logon
   logins = fs.readFileSync('bots', 'utf8').split("\n");
   for(var login in logins){
     var userPass = logins[login].split("\t");
@@ -44,13 +42,38 @@ app.get('/buildBots', function(req, res){
   eventEmitter.on('logonFinished', function(){
     if(loginTracker >= logins.length - 1){
       console.log("ALL BOTS LOGGED IN");
-      res.send("ALL BOTS LOGGED IN");
     } else {
       console.log("Bots still need to be logged in");
       loginTracker++;
     }
   });
-});
+
+})
+
+
+// if we've saved a server list, use it
+if (fs.existsSync('servers')) {
+  Steam.servers = JSON.parse(fs.readFileSync('servers'));
+}
+
+/*app.get('/buildBots', function(req, res){
+  logins = fs.readFileSync('bots', 'utf8').split("\n");
+  for(var login in logins){
+    var userPass = logins[login].split("\t");
+    console.log("Logging in " + userPass[0]);
+    var botObj = new buildABot(userPass[0], userPass[1])
+    botQueue.push(botObj);
+  }
+  eventEmitter.on('logonFinished', function(){
+    if(loginTracker >= logins.length - 1){
+      console.log("ALL BOTS LOGGED IN");
+      res.send(200); //ALL BOTS LOGGED IN
+    } else {
+      console.log("Bots still need to be logged in");
+      loginTracker++;
+    }
+  });
+});*/
 
 app.get('/requestItems', function(req, res){
     //Check if Bots are online
@@ -101,11 +124,15 @@ app.get('/returnItems', function(req, res){
     });
 });
 
-
-// if we've saved a server list, use it
-if (fs.existsSync('servers')) {
-  Steam.servers = JSON.parse(fs.readFileSync('servers'));
-}
+app.get('/inventory', function(req, res){
+  var steamID = req.query.steamID;
+  //send a web request to http://www.steamcommunity.com/profiles/<NUM>/inventory
+  request({
+    uri: 'http://www.steamcommunity.com/profiles/' + steamID + '/inventory/json/730/2/'
+  }, function(error, response, body){
+    res.send(body);
+  })
+});
 
 
 var buildABot = function(steamName, password){
