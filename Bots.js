@@ -21,7 +21,7 @@ var botQueue = [];
 var itemID = ['1775623782'];
 var itemFromThem = ['1776151529', '1776151533']
 
-app.listen(3000, function () {
+var server = app.listen(3000, function () {
 
   var host = server.address().address;
   var port = server.address().port;
@@ -30,7 +30,7 @@ app.listen(3000, function () {
 
 
   //Bots sign in on logon
-  logins = fs.readFileSync('bots', 'utf8').split("\n");
+  logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
   for(var login in logins){
     var userPass = logins[login].split("\t");
     console.log("Logging in " + userPass[0]);
@@ -55,7 +55,7 @@ if (fs.existsSync('servers')) {
 }
 
 /*app.get('/buildBots', function(req, res){
-  logins = fs.readFileSync('bots', 'utf8').split("\n");
+  logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
   for(var login in logins){
     var userPass = logins[login].split("\t");
     console.log("Logging in " + userPass[0]);
@@ -77,7 +77,7 @@ app.get('/requestItems', function(req, res){
     var steamIDtoTrade = req.query.steamID;
     //Check if Bots are online
     if(botQueue.length == 0){
-      //If there are no bots in the queue to take the order, then we can't process it.
+      //If there are no bots.botfile in the queue to take the order, then we can't process it.
       console.log("Sorry no bots available");
       res.send("No Bots available ATM");
       return;
