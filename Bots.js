@@ -78,6 +78,7 @@ if (fs.existsSync('servers')) {
 });*/
 
 app.get('/requestItems', function(req, res){
+    var steamIDtoTrade = req.query.steamID;
     //Check if Bots are online
     if(botQueue.length == 0){
       //If there are no bots in the queue to take the order, then we can't process it.
