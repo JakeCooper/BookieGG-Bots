@@ -17,6 +17,8 @@ var inTrade = false;
 var inventory;
 var loginTracker = 0;
 var userAccessToken = 'u4BAUYGe';
+var tradeOfferReturnable;
+var botDict = {};
 
 var botQueue = [];
 
@@ -85,9 +87,13 @@ app.get('/requestItems', function(req, res){
     } else {
       var currentBot = botQueue.shift();
     }
-    requestItems(currentBot.offerInstance, steamIDtoTrade, itemID, userAccessToken);
 
-    eventEmitter.on('requestOfferExpired', function(){
+    requestItems(currentBot.offerInstance, steamIDtoTrade, itemID, userAccessToken, function(response){
+      botDict[response] = currentBot;
+      res.send(response); //trade request sent successfully
+    });
+
+    /*eventEmitter.on('requestOfferExpired', function(){
       console.log("Request offer has timed out/been cancelled");
       res.send("Request offer has timed out/been cancelled");
       botQueue.push(currentBot);
@@ -96,9 +102,47 @@ app.get('/requestItems', function(req, res){
       console.log("Request offer has completed");
       res.send("Request offer has completed");
       botQueue.push(currentBot);
-    });
+    });*/
 
 });
+
+app.get('/pollTrade', function(req, res){
+    var tradeID = req.query.tradeID;
+    try {
+      var currentBot = botDict[tradeID]; //Gotta get the related bot;
+    } catch (e) {
+      res.send(e);
+    }
+    
+    pollTrade(currentBot.offerInstance, tradeID, function(response){
+      res.send(response)
+    });
+})
+
+var pollTrade = function(steamOfferObj, tradeID, callback){
+  steamOfferObj.getOffer({
+        tradeOfferId : tradeID // The tradeoffer id
+    }, function(error, body) {
+        console.log(body);
+        console.log(error);
+        if (error == null) {
+          //console.log(body);
+          console.log(body.response.offer.trade_offer_state);
+            if (body.response.offer.trade_offer_state == 3) {
+                delete botDict[tradeID]; //removes bot if trade is successful.
+                callback('requestOfferAccepted');
+                return;
+            } else if(body.response.offer.trade_offer_state == 7){
+                delete botDict[tradeID]; //removes bot if trade is unsuccessful.
+                callback('requestOfferExpired');
+                return;
+            } else {
+                callback('requestOfferPending');
+                return;
+            }
+        }
+    });
+}
 
 app.get('/returnItems', function(req, res){
     //Check if Bots are online
@@ -193,7 +237,7 @@ var buildABot = function(steamName, password){
   });
 }
 
-var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken){
+var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken, callback){
   var objectArray = [];
   steamOfferObj.loadPartnerInventory({
           partnerSteamId: steamID,
@@ -219,7 +263,12 @@ var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken){
           }, function(err, data) {
             console.log(err);
             console.log(data);
-            var start = Date.now();
+            try{
+              callback(data["tradeofferid"]);
+            }catch (e){
+              callback("Error occured: " + e);
+            }
+            /*var start = Date.now();
             function getData() {
               var setTimer = setTimeout(getData, 10000);
               if (Date.now() - start > 300000){
@@ -255,7 +304,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken){
               });
             }
 
-            getData();
+            getData();*/
 
           })
           
