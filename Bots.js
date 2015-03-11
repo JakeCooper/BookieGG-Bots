@@ -124,7 +124,7 @@ app.get('/returnItems', function(req, res){
     });
 });
 
-app.get('/inventory', function(req, res){
+app.get('/getInventory', function(req, res){
   var steamID = req.query.steamID;
   //send a web request to http://www.steamcommunity.com/profiles/<NUM>/inventory
   request({
