@@ -1,0 +1,24 @@
+{
+  "name": "bookiegg-bots",
+  "version": "1.0.0",
+  "description": "Current implementation of Bookie Bots.",
+  "main": "Bots.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JakeCooper/BookieGG-Bots.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/JakeCooper/BookieGG-Bots/issues"
+  },
+  "homepage": "https://github.com/JakeCooper/BookieGG-Bots",
+  "dependencies": {
+    "express": "^4.12.2",
+    "request": "^2.53.0",
+    "steam": "^0.6.8",
+    "steam-tradeoffers": "^1.2.1"
+  }
+}
