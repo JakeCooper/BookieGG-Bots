@@ -5,19 +5,15 @@ var request = require('request');
 var Steam = require('steam');
 var SteamTradeOffers = require('steam-tradeoffers');
 
-var express = require('express')
-var http = require('http')
-var app = express()
+var express = require('express');
+var app = express();
 
 var events = require('events');
 var eventEmitter = new events.EventEmitter();
 
-var steamIDtoTrade = '76561198009923867'
-var inTrade = false;
-var inventory;
+var steamIDtoTrade = '76561198009923867';
 var loginTracker = 0;
 var userAccessToken = 'u4BAUYGe';
-var tradeOfferReturnable;
 var botDict = {};
 
 var botQueue = [];
@@ -25,10 +21,10 @@ var botQueue = [];
 var itemID = ['1775623782'];
 var itemFromThem = ['1776151529', '1776151533']
 
-var server = app.listen(3000, function () {
+app.listen(3000, function () {
 
-  var host = server.address().address
-  var port = server.address().port
+  var host = server.address().address;
+  var port = server.address().port;
 
   console.log('BookieBot Webserver launched at http://%s:%s', host, port)
 
@@ -38,7 +34,7 @@ var server = app.listen(3000, function () {
   for(var login in logins){
     var userPass = logins[login].split("\t");
     console.log("Logging in " + userPass[0]);
-    var botObj = new buildABot(userPass[0], userPass[1])
+    var botObj = new buildABot(userPass[0], userPass[1]);
     botQueue.push(botObj);
   }
   eventEmitter.on('logonFinished', function(){
@@ -118,7 +114,7 @@ app.get('/pollTrade', function(req, res){
     pollTrade(currentBot.offerInstance, tradeID, function(response){
       res.send(response)
     });
-})
+});
 
 var pollTrade = function(steamOfferObj, tradeID, callback){
   steamOfferObj.getOffer({
@@ -132,18 +128,16 @@ var pollTrade = function(steamOfferObj, tradeID, callback){
             if (body.response.offer.trade_offer_state == 3) {
                 delete botDict[tradeID]; //removes bot if trade is successful.
                 callback('requestOfferAccepted');
-                return;
             } else if(body.response.offer.trade_offer_state == 7){
                 delete botDict[tradeID]; //removes bot if trade is unsuccessful.
                 callback('requestOfferExpired');
-                return;
             } else {
                 callback('requestOfferPending');
-                return;
+
             }
         }
     });
-}
+};
 
 app.get('/returnItems', function(req, res){
     //Check if Bots are online
@@ -158,10 +152,10 @@ app.get('/returnItems', function(req, res){
     returnItems(currentBot.offerInstance, steamIDtoTrade, itemFromThem);
     //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
     eventEmitter.on('returnOfferExpired', function(){
-      console.log("return Offer has timed out")
-      res.send("Return offer has timed out")
+      console.log("return Offer has timed out");
+      res.send("Return offer has timed out");
       botQueue.push(currentBot);
-    })
+    });
     eventEmitter.on('returnOfferAccepted', function(){
       console.log("Return offer has completed");
       res.send("Return offer has completed");
@@ -236,7 +230,7 @@ var buildABot = function(steamName, password){
     });
   
   });
-}
+};
 
 var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken, callback){
   var objectArray = [];
@@ -310,7 +304,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken, ca
           })
           
         })
-}
+};
 
 var returnItems = function(steamOfferObj, steamID, itemIDs){
     var objectArray = [];
@@ -345,7 +339,6 @@ var returnItems = function(steamOfferObj, steamID, itemIDs){
               }, function(){
                 clearTimeout(setTimer);
                 eventEmitter.emit('returnOfferExpired');
-                return;
               })
               
             }
@@ -372,4 +365,4 @@ var returnItems = function(steamOfferObj, steamID, itemIDs){
         })
     })
    
-}
+};
