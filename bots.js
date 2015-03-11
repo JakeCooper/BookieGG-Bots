@@ -20,19 +20,24 @@ var botDict = {};
 var botQueue = [];
 
 var itemID = ['1775623782'];
-var itemFromThem = ['1776151529', '1776151533']
+var itemFromThem = ['1776151529', '1776151533'];
 
 var server = app.listen(3000, function () {
 
   var host = server.address().address;
   var port = server.address().port;
 
-  console.log('BookieBot Webserver launched at http://%s:%s', host, port)
+  console.log('BookieBot Webserver launched at http://%s:%s', host, port);
 
 
   //Bots sign in on logon
-  logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
+  var logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
   for(var login in logins){
+    if(!logins.hasOwnProperty(login)) {
+      console.log("Could not parse login '" + login + "'");
+      continue;
+    }
+
     var userPass = logins[login].split("\t");
     console.log("Logging in " + userPass[0]);
     var botObj = new buildABot(userPass[0], userPass[1]);
@@ -47,32 +52,13 @@ var server = app.listen(3000, function () {
     }
   });
 
-})
+});
 
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
   Steam.servers = JSON.parse(fs.readFileSync('servers'));
 }
-
-/*app.get('/buildBots', function(req, res){
-  logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
-  for(var login in logins){
-    var userPass = logins[login].split("\t");
-    console.log("Logging in " + userPass[0]);
-    var botObj = new buildABot(userPass[0], userPass[1])
-    botQueue.push(botObj);
-  }
-  eventEmitter.on('logonFinished', function(){
-    if(loginTracker >= logins.length - 1){
-      console.log("ALL BOTS LOGGED IN");
-      res.send(200); //ALL BOTS LOGGED IN
-    } else {
-      console.log("Bots still need to be logged in");
-      loginTracker++;
-    }
-  });
-});*/
 
 app.get('/requestItems', function(req, res){
     var steamIDtoTrade = req.query.steamID;
@@ -90,18 +76,6 @@ app.get('/requestItems', function(req, res){
       botDict[response] = currentBot;
       res.send(response); //trade request sent successfully
     });
-
-    /*eventEmitter.on('requestOfferExpired', function(){
-      console.log("Request offer has timed out/been cancelled");
-      res.send("Request offer has timed out/been cancelled");
-      botQueue.push(currentBot);
-    });
-    eventEmitter.on('requestOfferAccepted', function(){
-      console.log("Request offer has completed");
-      res.send("Request offer has completed");
-      botQueue.push(currentBot);
-    });*/
-
 });
 
 app.get('/pollTrade', function(req, res){
@@ -264,44 +238,6 @@ var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken, ca
             }catch (e){
               callback("Error occured: " + e);
             }
-            /*var start = Date.now();
-            function getData() {
-              var setTimer = setTimeout(getData, 10000);
-              if (Date.now() - start > 300000){
-                steamOfferObj.cancelOffer({
-                  tradeOfferId: data["tradeofferid"]
-                }, function(){
-                  clearTimeout(setTimer);
-                  eventEmitter.emit('requestOfferExpired');
-                  return;
-                })
-                
-              }
-              steamOfferObj.getOffer({
-                  tradeOfferId : data["tradeofferid"] // The tradeoffer id
-              }, function(error, body) {
-                  console.log(body);
-                  console.log(error);
-                  if (error == null) {
-                    //console.log(body);
-                    console.log(body.response.offer.trade_offer_state);
-                      if (body.response.offer.trade_offer_state == 3) {
-                          eventEmitter.emit('requestOfferAccepted');
-                          clearTimeout(setTimer);
-                          return "Offer Accepted" //on accept
-                      } else if(body.response.offer.trade_offer_state == 7){
-                          eventEmitter.emit('requestOfferExpired');
-                          clearTimeout(setTimer);
-                          return "Offer cancelled";
-                      } else {
-
-                      }
-                  }
-              });
-            }
-
-            getData();*/
-
           })
           
         })
@@ -351,7 +287,7 @@ var returnItems = function(steamOfferObj, steamID, itemIDs){
                     if (body.response.offer.trade_offer_state == 3) {
                         eventEmitter.emit('returnOfferAccepted');
                         clearTimeout(setTimer);
-                        return "Offer Accepted" //on accept
+                        return "Offer Accepted"; //on accept
                     } else if(body.response.offer.trade_offer_state == 7){
                         eventEmitter.emit('returnOfferExpired');
                         clearTimeout(setTimer);
