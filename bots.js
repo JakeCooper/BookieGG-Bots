@@ -144,7 +144,15 @@ app.get('/getInventory', function(req, res){
   request({
     uri: 'http://www.steamcommunity.com/profiles/' + steamID + '/inventory/json/730/2/'
   }, function(error, response, body){
-    res.send(body);
+    var contentType = response.headers['content-type'];
+    contentType = contentType.split(';');
+    contentType = contentType[0];
+    if(contentType != "application/json") {
+      res.statusCode = 404;
+      res.send("404 - Inventory not found");
+    } else {
+      res.send(body);
+    }
   })
 });
 
