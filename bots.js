@@ -12,7 +12,7 @@ var app = express();
 var events = require('events');
 var eventEmitter = new events.EventEmitter();
 
-var steamIDtoTrade = '76561198009923867';
+var steamIDtoTrade = '76561198005107171'; // whom to trade
 var loginTracker = 0;
 var userAccessToken = 'u4BAUYGe';
 var botDict = {};
@@ -20,7 +20,7 @@ var botDict = {};
 var botQueue = [];
 
 var itemID = ['1775623782'];
-var itemToThem = ['1776151529', '1776151533'];
+var itemToThem = ['469431148'];
 
 var server = app.listen(3000, function () {
 
@@ -59,6 +59,11 @@ var server = app.listen(3000, function () {
 if (fs.existsSync('servers')) {
   Steam.servers = JSON.parse(fs.readFileSync('servers'));
 }
+
+app.get('/', function(req, res) {
+    res.statusCode = 403;
+    res.send('403 - Access denied');
+});
 
 app.get('/request_items', function(req, res){
     var steamIDtoTrade = req.query.steamID;
@@ -227,8 +232,10 @@ var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken, ca
           appId: 730,
           contextId: 2
         }, function(errr, items){
+        if(!Array.isArray(itemIDs)) {
+            itemIDs = [itemIDs];
+        }
           for(var index in itemIDs){
-            console.log(items);
             objectArray.push({
               "appid": 730,
               "contextid" : 2,
@@ -236,7 +243,6 @@ var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken, ca
               "assetid" : itemIDs[index]
             });
           }
-          console.log(objectArray);
 
           steamOfferObj.makeOffer({
             partnerSteamId : steamID,
@@ -252,7 +258,7 @@ var requestItems = function(steamOfferObj, steamID, itemIDs, userAccessToken, ca
               callback("Error occured: " + e);
             }
           })
-          
+
         })
 };
 
