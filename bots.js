@@ -20,7 +20,7 @@ var botDict = {};
 var botQueue = [];
 
 var itemID = ['1775623782'];
-var itemFromThem = ['1776151529', '1776151533'];
+var itemToThem = ['1776151529', '1776151533'];
 
 var server = app.listen(3000, function () {
 
@@ -57,11 +57,13 @@ var server = app.listen(3000, function () {
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
-  Steam.servers = JSON.parse(fs.readFileSync('servers'));
+  //Steam.servers = JSON.parse(fs.readFileSync('servers'));
 }
 
-app.get('/requestItems', function(req, res){
+app.get('/request_items', function(req, res){
     var steamIDtoTrade = req.query.steamID;
+    var itemID = req.query.itemIDs;
+    var userAccessToken = req.query.userAccessToken;
     //Check if Bots are online
     if(botQueue.length == 0){
       //If there are no bots.botfile in the queue to take the order, then we can't process it.
@@ -78,7 +80,7 @@ app.get('/requestItems', function(req, res){
     });
 });
 
-app.get('/pollTrade', function(req, res){
+app.get('/poll_trade', function(req, res){
     var tradeID = req.query.tradeID;
     try {
       var currentBot = botDict[tradeID]; //Gotta get the related bot;
@@ -114,7 +116,10 @@ var pollTrade = function(steamOfferObj, tradeID, callback){
     });
 };
 
-app.get('/returnItems', function(req, res){
+app.get('/return_items', function(req, res){
+    var steamIDtoTrade = req.query.steamID;
+    var itemsToThem = req.query.itemIDs;
+    var userAccessToken = req.query.userAccessToken;
     //Check if Bots are online
     if(botQueue.length == 0){
       //If there are no bots in the queue to take the order, then we can't process it.
@@ -124,7 +129,7 @@ app.get('/returnItems', function(req, res){
     } else {
       var currentBot = botQueue.shift();
     }
-    returnItems(currentBot.offerInstance, steamIDtoTrade, itemFromThem);
+    returnItems(currentBot.offerInstance, steamIDtoTrade, itemToThem);
     //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
     eventEmitter.on('returnOfferExpired', function(){
       console.log("return Offer has timed out");
@@ -138,7 +143,7 @@ app.get('/returnItems', function(req, res){
     });
 });
 
-app.get('/getInventory', function(req, res){
+app.get('/get_inventory', function(req, res){
   var steamID = req.query.steamID;
   //send a web request to http://www.steamcommunity.com/profiles/<NUM>/inventory
   request({
@@ -158,6 +163,7 @@ app.get('/getInventory', function(req, res){
 
 
 var buildABot = function(steamName, password){
+  console.log(Steam.SteamClient);
   var bot = new Steam.SteamClient();
   this.botInstance = bot;
   this.name = steamName;
