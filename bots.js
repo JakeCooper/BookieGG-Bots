@@ -12,14 +12,11 @@ var app = express();
 var events = require('events');
 var eventEmitter = new events.EventEmitter();
 
-var steamIDtoTrade = '76561198005107171'; // whom to trade
 var loginTracker = 0;
-var userAccessToken = 'u4BAUYGe';
 var botDict = {};
 
 var botQueue = [];
 
-var itemID = ['1775623782'];
 var itemToThem = ['469431148'];
 
 var server = app.listen(3000, function () {
@@ -174,12 +171,12 @@ var buildABot = function (steamName, password) {
     var steamOffers = new SteamTradeOffers();
     this.inTrade = false;
     this.offerInstance = steamOffers;
-    if (fs.existsSync(steamName + ".sentry")) {
+    if (fs.existsSync("./sentries/" + steamName + ".sentry")) {
         //If there is a sentry file, use it.
         bot.logOn({
             accountName: steamName,
             password: password,
-            shaSentryfile: fs.readFileSync(steamName + ".sentry")
+            shaSentryfile: fs.readFileSync("./sentries/" + steamName + ".sentry")
         })
     } else {
         //Probably gonna need another couple ifs here, gonna need to scrape steamguard.
@@ -208,13 +205,7 @@ var buildABot = function (steamName, password) {
         bot.on('sentry', function (sentryHash) {
             fs.exists('sentryfile' + steamName, function (exists) {
                 if (!exists) {
-                    fs.writeFile('sentryfile', sentryHash, function (err) {
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            console.log('Saved sentry file hash as ' + steamName + '.sentry');
-                        }
-                    });
+                    console.error("New sentryfile generated for some bot");
                 } else {
                     console.log("Sentry file already exists.")
                 }
