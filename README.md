@@ -10,4 +10,4 @@ get Request commands:
 
 /poll_trade?tradeID=<TRADEID>
 
-/return_Items?steamID=steam64ID&itemID=['itemID1','itemID2']&userAccessToken=token
+/return_Items?steamID=steam64ID&itemID=ID1&itemID=ID2&userAccessToken=token

@@ -57,12 +57,12 @@ var server = app.listen(3000, function () {
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
-  //Steam.servers = JSON.parse(fs.readFileSync('servers'));
+  Steam.servers = JSON.parse(fs.readFileSync('servers'));
 }
 
 app.get('/request_items', function(req, res){
     var steamIDtoTrade = req.query.steamID;
-    var itemID = req.query.itemIDs;
+    var itemID = req.query.itemID;
     var userAccessToken = req.query.userAccessToken;
     //Check if Bots are online
     if(botQueue.length == 0){
@@ -163,7 +163,6 @@ app.get('/get_inventory', function(req, res){
 
 
 var buildABot = function(steamName, password){
-  console.log(Steam.SteamClient);
   var bot = new Steam.SteamClient();
   this.botInstance = bot;
   this.name = steamName;
