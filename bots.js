@@ -86,7 +86,8 @@ var buildABot = function (steamName, password) {
 var extractItemIds = function(items) {
     var out = [];
     for(var index in items) {
-        out.push(items[index]['id']);
+        if(items.hasOwnProperty(index))
+            out.push(items[index]['id']);
     }
 
     return out;
