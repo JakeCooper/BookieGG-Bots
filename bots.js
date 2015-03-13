@@ -14,10 +14,10 @@ var eventEmitter = new events.EventEmitter();
 
 var loginTracker = 0;
 var botDict = {};
-
 var botQueue = [];
 
-var itemToThem = ['469431148'];
+var InventoryProvider = require('./inventory_provider');
+var inventory_provider = new InventoryProvider();
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
@@ -142,70 +142,6 @@ var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, c
     });
 };
 
-var returnItems = function (steamOfferObj, steamID, itemIDs) {
-    var objectArray = [];
-    steamOfferObj.loadMyInventory({
-        appId: 730,
-        contextId: 2
-    }, function (err, items) {
-        console.log(items);
-        for (var index in itemIDs) {
-            if(itemIDs.hasOwnProperty(index)) {
-                objectArray.push({
-                    "appid": 730,
-                    "contextid": 2,
-                    "amount": 1,
-                    "assetid": itemIDs[index]
-                });
-            }
-        }
-        console.log(objectArray);
-        steamOfferObj.makeOffer({
-            partnerSteamId: steamID,
-            itemsFromMe: objectArray,
-            itemsToMe: {}
-        }, function (err, data) {
-            console.log(err);
-            console.log(data);
-            var start = Date.now();
-
-            function getData() {
-                setTimeout(getData, 10000);
-                if (Date.now() - start > 300000) {
-                    steamOfferObj.cancelOffer({
-                        tradeOfferId: data["tradeofferid"]
-                    }, function () {
-                        clearTimeout(setTimer);
-                        eventEmitter.emit('returnOfferExpired');
-                    })
-
-                }
-                steamOfferObj.getOffer({
-                    tradeOfferId: data["tradeofferid"] // The tradeoffer id
-                }, function (error, body) {
-                    if (error == null) {
-                        console.log(body);
-                        if (body.response.offer.trade_offer_state == 3) {
-                            eventEmitter.emit('returnOfferAccepted');
-                            clearTimeout(setTimer);
-                            return "Offer Accepted"; //on accept
-                        } else if (body.response.offer.trade_offer_state == 7) {
-                            eventEmitter.emit('returnOfferExpired');
-                            clearTimeout(setTimer);
-                            return "Offer cancelled";
-                        } else {
-
-                        }
-                    }
-                });
-            }
-
-            getData();
-        })
-    })
-
-};
-
 //Bots sign in on logon
 var logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
 for (var login in logins) {
@@ -269,49 +205,17 @@ http.get('/poll_trade', function (req, res) {
     });
 });
 
-http.get('/return_items', function (req, res) {
-    var steamIDtoTrade = req.query.steamID;
-    var itemsToThem = req.query.itemIDs;
-    var userAccessToken = req.query.userAccessToken;
-    //Check if Bots are online
-    if (botQueue.length == 0) {
-        //If there are no bots in the queue to take the order, then we can't process it.
-        console.log("Sorry no bots available");
-        res.send("No Bots available ATM");
-        return;
-    } else {
-        var currentBot = botQueue.shift();
-    }
-    returnItems(currentBot.offerInstance, steamIDtoTrade, itemToThem);
-    //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
-    eventEmitter.on('returnOfferExpired', function () {
-        console.log("return Offer has timed out");
-        res.send("Return offer has timed out");
-        botQueue.push(currentBot);
-    });
-    eventEmitter.on('returnOfferAccepted', function () {
-        console.log("Return offer has completed");
-        res.send("Return offer has completed");
-        botQueue.push(currentBot);
-    });
-});
-
 http.get('/get_inventory', function (req, res) {
     var steamID = req.query.steamID;
-    //send a web request to http://www.steamcommunity.com/profiles/<NUM>/inventory
-    request({
-        uri: 'http://www.steamcommunity.com/profiles/' + steamID + '/inventory/json/730/2/'
-    }, function (error, response, body) {
-        var contentType = response.headers['content-type'];
-        contentType = contentType.split(';');
-        contentType = contentType[0];
-        if (contentType != "application/json") {
-            res.statusCode = 404;
-            res.send("404 - Inventory not found");
+    inventory_provider.getInventory(steamID, function(response) {
+        if (response['status'] == "fail") {
+            res.statusCode = 503;
+            res.send("503 - Steam service unavailable");
         } else {
-            res.send(body);
+            res.send(response['inventory']);
         }
-    })
+    });
+
 });
 
 // temporarily disable
