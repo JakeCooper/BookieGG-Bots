@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 var fs = require('fs');
 
+var HttpInterface = require('./http_interface');
+var http = new HttpInterface();
 var request = require('request');
 
 var Steam = require('steam');
 var SteamTradeOffers = require('steam-tradeoffers');
-
-var express = require('express');
-var app = express();
 
 var events = require('events');
 var eventEmitter = new events.EventEmitter();
@@ -19,81 +18,11 @@ var botQueue = [];
 
 var itemToThem = ['469431148'];
 
-var server = app.listen(3000, function () {
-
-    var host = server.address().address;
-    var port = server.address().port;
-
-    console.log('BookieBot Webserver launched at http://%s:%s', host, port);
-
-
-    //Bots sign in on logon
-    var logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
-    for (var login in logins) {
-        if (!logins.hasOwnProperty(login)) {
-            console.log("Could not parse login '" + login + "'");
-            continue;
-        }
-
-        var userPass = logins[login].split("\t");
-        console.log("Logging in " + userPass[0]);
-        var botObj = new buildABot(userPass[0], userPass[1]);
-        botQueue.push(botObj);
-    }
-    eventEmitter.on('logonFinished', function () {
-        if (loginTracker >= logins.length - 1) {
-            console.log("ALL BOTS LOGGED IN");
-        } else {
-            console.log("Bots still need to be logged in");
-            loginTracker++;
-        }
-    });
-
-});
-
-
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
     Steam.servers = JSON.parse(fs.readFileSync('servers'));
 }
 
-app.get('/', function (req, res) {
-    res.statusCode = 403;
-    res.send('403 - Access denied');
-});
-
-app.get('/request_items', function (req, res) {
-    var steamIDtoTrade = req.query.steamID;
-    var itemID = req.query.itemID;
-    var userAccessToken = req.query.userAccessToken;
-    //Check if Bots are online
-    if (botQueue.length == 0) {
-        //If there are no bots.botfile in the queue to take the order, then we can't process it.
-        console.log("Sorry no bots available");
-        res.send("No Bots available ATM");
-        return;
-    } else {
-        var currentBot = botQueue.shift();
-    }
-
-    requestItems(currentBot.offerInstance, steamIDtoTrade, itemID, userAccessToken, function (response) {
-        botDict[response] = currentBot;
-        res.send(response); //trade request sent successfully
-    });
-});
-
-app.get('/poll_trade', function (req, res) {
-    var tradeID = req.query.tradeID;
-    try {
-        var currentBot = botDict[tradeID]; //Gotta get the related bot;
-    } catch (e) {
-        res.send(e);
-    }
-
-    pollTrade(currentBot.offerInstance, tradeID, function (response) {
-        res.send(response)
-    });
-});
 
 var pollTrade = function (steamOfferObj, tradeID, callback) {
     steamOfferObj.getOffer({
@@ -117,52 +46,6 @@ var pollTrade = function (steamOfferObj, tradeID, callback) {
         }
     });
 };
-
-app.get('/return_items', function (req, res) {
-    var steamIDtoTrade = req.query.steamID;
-    var itemsToThem = req.query.itemIDs;
-    var userAccessToken = req.query.userAccessToken;
-    //Check if Bots are online
-    if (botQueue.length == 0) {
-        //If there are no bots in the queue to take the order, then we can't process it.
-        console.log("Sorry no bots available");
-        res.send("No Bots available ATM");
-        return;
-    } else {
-        var currentBot = botQueue.shift();
-    }
-    returnItems(currentBot.offerInstance, steamIDtoTrade, itemToThem);
-    //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
-    eventEmitter.on('returnOfferExpired', function () {
-        console.log("return Offer has timed out");
-        res.send("Return offer has timed out");
-        botQueue.push(currentBot);
-    });
-    eventEmitter.on('returnOfferAccepted', function () {
-        console.log("Return offer has completed");
-        res.send("Return offer has completed");
-        botQueue.push(currentBot);
-    });
-});
-
-app.get('/get_inventory', function (req, res) {
-    var steamID = req.query.steamID;
-    //send a web request to http://www.steamcommunity.com/profiles/<NUM>/inventory
-    request({
-        uri: 'http://www.steamcommunity.com/profiles/' + steamID + '/inventory/json/730/2/'
-    }, function (error, response, body) {
-        var contentType = response.headers['content-type'];
-        contentType = contentType.split(';');
-        contentType = contentType[0];
-        if (contentType != "application/json") {
-            res.statusCode = 404;
-            res.send("404 - Inventory not found");
-        } else {
-            res.send(body);
-        }
-    })
-});
-
 
 var buildABot = function (steamName, password) {
     var bot = new Steam.SteamClient();
@@ -314,3 +197,116 @@ var returnItems = function (steamOfferObj, steamID, itemIDs) {
     })
 
 };
+
+//Bots sign in on logon
+var logins = fs.readFileSync('bots.botfile', 'utf8').split("\n");
+for (var login in logins) {
+    if (!logins.hasOwnProperty(login)) {
+        console.log("Could not parse login '" + login + "'");
+        continue;
+    }
+
+    var userPass = logins[login].split("\t");
+    console.log("Logging in " + userPass[0]);
+    var botObj = new buildABot(userPass[0], userPass[1]);
+    botQueue.push(botObj);
+}
+
+eventEmitter.on('logonFinished', function () {
+    if (loginTracker >= logins.length - 1) {
+        console.log("ALL BOTS LOGGED IN");
+    } else {
+        console.log("Bots still need to be logged in");
+        loginTracker++;
+    }
+});
+
+
+
+http.get('/', function (req, res) {
+    res.statusCode = 403;
+    res.send('403 - Access denied');
+});
+
+http.get('/request_items', function (req, res) {
+    var steamIDtoTrade = req.query.steamID;
+    var itemID = req.query.itemID;
+    var userAccessToken = req.query.userAccessToken;
+    //Check if Bots are online
+    if (botQueue.length == 0) {
+        //If there are no bots.botfile in the queue to take the order, then we can't process it.
+        console.log("Sorry no bots available");
+        res.send("No Bots available ATM");
+        return;
+    } else {
+        var currentBot = botQueue.shift();
+    }
+
+    requestItems(currentBot.offerInstance, steamIDtoTrade, itemID, userAccessToken, function (response) {
+        botDict[response] = currentBot;
+        res.send(response); //trade request sent successfully
+    });
+});
+
+http.get('/poll_trade', function (req, res) {
+    var tradeID = req.query.tradeID;
+    try {
+        var currentBot = botDict[tradeID]; //Gotta get the related bot;
+    } catch (e) {
+        res.send(e);
+    }
+
+    pollTrade(currentBot.offerInstance, tradeID, function (response) {
+        res.send(response)
+    });
+});
+
+http.get('/return_items', function (req, res) {
+    var steamIDtoTrade = req.query.steamID;
+    var itemsToThem = req.query.itemIDs;
+    var userAccessToken = req.query.userAccessToken;
+    //Check if Bots are online
+    if (botQueue.length == 0) {
+        //If there are no bots in the queue to take the order, then we can't process it.
+        console.log("Sorry no bots available");
+        res.send("No Bots available ATM");
+        return;
+    } else {
+        var currentBot = botQueue.shift();
+    }
+    returnItems(currentBot.offerInstance, steamIDtoTrade, itemToThem);
+    //NEED EMAIL SCRAPAGE HERE TO CONFIRM OFFER!
+    eventEmitter.on('returnOfferExpired', function () {
+        console.log("return Offer has timed out");
+        res.send("Return offer has timed out");
+        botQueue.push(currentBot);
+    });
+    eventEmitter.on('returnOfferAccepted', function () {
+        console.log("Return offer has completed");
+        res.send("Return offer has completed");
+        botQueue.push(currentBot);
+    });
+});
+
+http.get('/get_inventory', function (req, res) {
+    var steamID = req.query.steamID;
+    //send a web request to http://www.steamcommunity.com/profiles/<NUM>/inventory
+    request({
+        uri: 'http://www.steamcommunity.com/profiles/' + steamID + '/inventory/json/730/2/'
+    }, function (error, response, body) {
+        var contentType = response.headers['content-type'];
+        contentType = contentType.split(';');
+        contentType = contentType[0];
+        if (contentType != "application/json") {
+            res.statusCode = 404;
+            res.send("404 - Inventory not found");
+        } else {
+            res.send(body);
+        }
+    })
+});
+
+
+
+
+var server = http.listen(3000);
