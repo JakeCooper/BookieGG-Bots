@@ -95,12 +95,14 @@ var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, c
             itemIDs = [itemIDs];
         }
         for (var index in itemIDs) {
-            objectArray.push({
-                "appid": 730,
-                "contextid": 2,
-                "amount": 1,
-                "assetid": itemIDs[index]
-            });
+            if(itemIDs.hasOwnProperty(index)) {
+                objectArray.push({
+                    "appid": 730,
+                    "contextid": 2,
+                    "amount": 1,
+                    "assetid": itemIDs[index]
+                });
+            }
         }
 
         steamOfferObj.makeOffer({
