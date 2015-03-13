@@ -4,7 +4,6 @@ var S = require('string');
 
 var HttpInterface = require('./http_interface');
 var http = new HttpInterface();
-var request = require('request');
 
 var Steam = require('steam');
 var SteamTradeOffers = require('steam-tradeoffers');
@@ -219,4 +218,4 @@ http.get('/get_inventory', function (req, res) {
 });
 
 // temporarily disable
-var server = http.listen(3000);
+http.listen(3000);
