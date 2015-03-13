@@ -118,7 +118,7 @@ var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, c
                         "assetid": itemID
                     });
                 } else {
-                    callback({status: 'error', 'message': "Item '" + itemID + "' not found in user's inventory"});
+                    callback({status: 'error', 'message': "Item not found in user's inventory", itemid: itemID});
                     return;
                 }
             }
