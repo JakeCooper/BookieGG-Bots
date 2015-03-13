@@ -24,7 +24,7 @@ if (fs.existsSync('servers')) {
 }
 
 
-var pollTrade = function (steamOfferObj, tradeID, callback) {
+var pollTrade = function (botDict, steamOfferObj, tradeID, callback) {
     steamOfferObj.getOffer({
         tradeOfferId: tradeID // The tradeoffer id
     }, function (error, body) {
@@ -256,7 +256,7 @@ http.get('/poll_trade', function (req, res) {
         res.send(e);
     }
 
-    pollTrade(currentBot.offerInstance, tradeID, function (response) {
+    pollTrade(botDict, currentBot.offerInstance, tradeID, function (response) {
         res.send(response)
     });
 });
