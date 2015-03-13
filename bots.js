@@ -16,7 +16,7 @@ var loginTracker = 0;
 var botDict = {};
 var botQueue = [];
 
-var InventoryProvider = require('./inventory_provider');
+var InventoryProvider = require('./inventory/provider');
 var inventory_provider = new InventoryProvider();
 
 // if we've saved a server list, use it

@@ -1,6 +1,6 @@
 var request = require('request');
 
-var InventoryProvider = function() {
+var Provider = function() {
     this.getInventory = function(steamId, callback) {
         request({
             uri: 'http://www.steamcommunity.com/profiles/' + steamId + '/inventory/json/730/2/'
@@ -17,4 +17,4 @@ var InventoryProvider = function() {
     }
 };
 
-module.exports = InventoryProvider;
+module.exports = Provider;
