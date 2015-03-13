@@ -90,7 +90,7 @@ var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, c
         partnerSteamId: steamID,
         appId: 730,
         contextId: 2
-    }, function (errr, items) {
+    }, function (err, items) {
         if (!Array.isArray(itemIDs)) {
             itemIDs = [itemIDs];
         }
@@ -111,12 +111,12 @@ var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, c
             itemsFromMe: {},
             itemsFromThem: objectArray
         }, function (err, data) {
-            console.log(err);
-            console.log(data);
-            try {
-                callback(data["tradeofferid"]);
-            } catch (e) {
-                callback("Error occured: " + e);
+            if(err) console.log(err);
+
+            if(data.hasOwnProperty('tradeofferid')) {
+                callback({status: 'success', 'id': data["tradeofferid"]});
+            } else {
+                callback({status: 'fail', message: 'TradeOfferID not provided from trade'});
             }
         })
 
