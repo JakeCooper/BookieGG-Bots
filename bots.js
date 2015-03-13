@@ -84,6 +84,15 @@ var buildABot = function (steamName, password) {
     });
 };
 
+var extractItemIds = function(items) {
+    var out = [];
+    for(var index in items) {
+        out.push(items[index]['id']);
+    }
+
+    return out;
+};
+
 var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, callback) {
     var objectArray = [];
     steamOfferObj.loadPartnerInventory({
@@ -91,17 +100,27 @@ var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, c
         appId: 730,
         contextId: 2
     }, function (err, items) {
+        var partnersItemIds = extractItemIds(items);
+
         if (!Array.isArray(itemIDs)) {
             itemIDs = [itemIDs];
         }
         for (var index in itemIDs) {
             if(itemIDs.hasOwnProperty(index)) {
-                objectArray.push({
-                    "appid": 730,
-                    "contextid": 2,
-                    "amount": 1,
-                    "assetid": itemIDs[index]
-                });
+                var itemID = itemIDs[index];
+
+                if(partnersItemIds.indexOf(itemID) > -1) {
+
+                    objectArray.push({
+                        "appid": 730,
+                        "contextid": 2,
+                        "amount": 1,
+                        "assetid": itemID
+                    });
+                } else {
+                    callback({status: 'error', 'message': "Item '" + itemID + "' not found in user's inventory"});
+                    return;
+                }
             }
         }
 
@@ -120,7 +139,7 @@ var requestItems = function (steamOfferObj, steamID, itemIDs, userAccessToken, c
             }
         })
 
-    })
+    });
 };
 
 var returnItems = function (steamOfferObj, steamID, itemIDs) {
@@ -294,4 +313,4 @@ http.get('/get_inventory', function (req, res) {
 });
 
 // temporarily disable
-// var server = http.listen(3000);
+var server = http.listen(3000);
