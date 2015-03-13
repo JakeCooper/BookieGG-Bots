@@ -147,15 +147,17 @@ var returnItems = function (steamOfferObj, steamID, itemIDs) {
     steamOfferObj.loadMyInventory({
         appId: 730,
         contextId: 2
-    }, function (errr, items) {
+    }, function (err, items) {
         console.log(items);
         for (var index in itemIDs) {
-            objectArray.push({
-                "appid": 730,
-                "contextid": 2,
-                "amount": 1,
-                "assetid": itemIDs[index]
-            });
+            if(itemIDs.hasOwnProperty(index)) {
+                objectArray.push({
+                    "appid": 730,
+                    "contextid": 2,
+                    "amount": 1,
+                    "assetid": itemIDs[index]
+                });
+            }
         }
         console.log(objectArray);
         steamOfferObj.makeOffer({
