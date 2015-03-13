@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 var fs = require('fs');
+var S = require('string');
 
 var HttpInterface = require('./http_interface');
 var http = new HttpInterface();
@@ -23,6 +24,9 @@ if (fs.existsSync('servers')) {
     Steam.servers = JSON.parse(fs.readFileSync('servers'));
 }
 
+var botMessage = function(name, message) {
+    return '[' + S(name).padLeft(20) + '] ' + message;
+};
 
 var pollTrade = function (botDict, steamOfferObj, tradeID, callback) {
     steamOfferObj.getOffer({
@@ -48,54 +52,35 @@ var pollTrade = function (botDict, steamOfferObj, tradeID, callback) {
 };
 
 var buildABot = function (steamName, password) {
+    var buildABotContext = this;
     var bot = new Steam.SteamClient();
-    this.botInstance = bot;
     this.name = steamName;
-    var steamOffers = new SteamTradeOffers();
-    this.inTrade = false;
-    this.offerInstance = steamOffers;
+    this.offerInstance = new SteamTradeOffers();
     if (fs.existsSync("./sentries/" + steamName + ".sentry")) {
-        //If there is a sentry file, use it.
+        console.log(botMessage(steamName, 'Logging in'));
         bot.logOn({
             accountName: steamName,
             password: password,
             shaSentryfile: fs.readFileSync("./sentries/" + steamName + ".sentry")
-        })
+        });
     } else {
-        //Probably gonna need another couple ifs here, gonna need to scrape steamguard.
-        bot.logOn({
-            accountName: steamName,
-            password: password
-        })
+        console.error(botMessage(steamName, 'Unable to log in!'));
     }
 
     bot.on('loggedOn', function () {
-        console.log(steamName + ' Logged in!');
-        bot.setPersonaState(Steam.EPersonaState.Online); // to display your bot's status as "Online"
+        bot.setPersonaState(Steam.EPersonaState.Online);
     });
 
     bot.on('webSessionID', function (sessionID) {
         bot.webLogOn(function (cookies) {
-            for (var cookie in cookies) console.log(cookies[cookie]);
-            steamOffers.setup({
+            buildABotContext.offerInstance.setup({
                 sessionID: sessionID,
                 webCookie: cookies
             }, function () {
-                console.log("SteamOffers cookies set");
+                console.log(botMessage(buildABotContext.name, 'Has successfully logged in.'));
                 eventEmitter.emit('logonFinished');
             })
         });
-        bot.on('sentry', function (sentryHash) {
-            fs.exists('sentryfile' + steamName, function (exists) {
-                if (!exists) {
-                    console.error("New sentryfile generated for some bot");
-                } else {
-                    console.log("Sentry file already exists.")
-                }
-            })
-
-        });
-
     });
 };
 
@@ -306,7 +291,5 @@ http.get('/get_inventory', function (req, res) {
     })
 });
 
-
-
-
-var server = http.listen(3000);
+// temporarily disable
+// var server = http.listen(3000);
