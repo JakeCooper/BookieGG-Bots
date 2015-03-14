@@ -17,6 +17,7 @@ var botQueue = [];
 
 var InventoryProvider = require('./inventory/provider');
 var inventory_provider = new InventoryProvider();
+var inventory_interface = require('./inventory/interface');
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
@@ -205,18 +206,7 @@ http.get('/poll_trade', function (req, res) {
     });
 });
 
-http.get('/get_inventory', function (req, res) {
-    var steamID = req.query.steamID;
-    inventory_provider.getInventory(steamID, function(response) {
-        if (response['status'] == "fail") {
-            res.statusCode = 503;
-            res.send("503 - Steam service unavailable");
-        } else {
-            res.send(response['inventory']);
-        }
-    });
-
-});
+http.get('/get_inventory', inventory_interface(inventory_provider));
 
 // temporarily disable
 http.listen(3000);
