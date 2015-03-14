@@ -5,15 +5,6 @@ var HttpInterface = require('./http_interface');
 var http = new HttpInterface();
 
 var Steam = require('steam');
-var SteamTradeOffers = require('steam-tradeoffers');
-
-var events = require('events');
-var eventEmitter = new events.EventEmitter();
-
-var loginTracker = 0;
-var botDict = {};
-var botQueue = [];
-
 var utils = require('./utils');
 
 var Bot = require('./bot/bot');
