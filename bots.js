@@ -18,6 +18,7 @@ var botQueue = [];
 var InventoryProvider = require('./provider/inventory_provider');
 var inventory_provider = new InventoryProvider();
 var inventory_interface = require('./interface/inventory_interface');
+var root_interface = require('./interface/root_interface');
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
@@ -168,10 +169,7 @@ eventEmitter.on('logonFinished', function () {
 
 
 
-http.get('/', function (req, res) {
-    res.statusCode = 403;
-    res.send('403 - Access denied');
-});
+http.get('/', root_interface);
 
 http.get('/request_items', function (req, res) {
     var steamIDtoTrade = req.query.steamID;
