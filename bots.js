@@ -15,9 +15,9 @@ var loginTracker = 0;
 var botDict = {};
 var botQueue = [];
 
-var InventoryProvider = require('./inventory/provider');
+var InventoryProvider = require('./provider/inventory_provider');
 var inventory_provider = new InventoryProvider();
-var inventory_interface = require('./inventory/interface');
+var inventory_interface = require('./interface/inventory_interface');
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
