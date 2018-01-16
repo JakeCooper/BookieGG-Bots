@@ -1,5 +1,5 @@
 # BookieGG-Bots
-Current implementation of Bookie Bots.
+Old implementation of Bookie Bots. Newer Golang implementation remains private.
 
 
 get Request commands:
